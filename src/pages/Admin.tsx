@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
@@ -37,16 +37,25 @@ const Admin = () => {
   });
 
   const [managedRooms, setManagedRooms] = useState<Room[]>(() => [...initialRooms]);
-  const [teachers, setTeachers] = useState<Teacher[]>(MOCK_TEACHERS);
+  const [teachers, setTeachers] = useState<Teacher[]>(() => {
+    try {
+      const saved = localStorage.getItem('school_teachers');
+      return saved ? JSON.parse(saved) : MOCK_TEACHERS;
+    } catch { return MOCK_TEACHERS; }
+  });
 
   useEffect(() => {
     saveRoomsToStorage(managedRooms);
   }, [managedRooms]);
 
+  useEffect(() => {
+    localStorage.setItem('school_teachers', JSON.stringify(teachers));
+  }, [teachers]);
+
   // Room form
   const [newRoomNumber, setNewRoomNumber] = useState('');
   const [newRoomFloor, setNewRoomFloor] = useState('1');
-  const [newRoomType, setNewRoomType] = useState('Klasė');
+  const [newRoomSubject, setNewRoomSubject] = useState('');
 
   // Teacher form
   const [newTeacherName, setNewTeacherName] = useState('');
@@ -64,6 +73,24 @@ const Admin = () => {
   const selectedRoom = managedRooms.find(r => r.id === editRoom);
   const selectedDayLessons = selectedRoom?.schedule[editDay] || [];
 
+  const DEFAULT_SUBJECTS = [
+    'Matematika', 'Lietuvių kalba', 'Anglų kalba', 'Fizika', 'Chemija',
+    'Biologija', 'Istorija', 'Geografija', 'IT', 'Muzika',
+    'Dailė', 'Dailė/technologijos', 'Technologijos', 'Vokiečių kalba', 'Rusų kalba',
+    'Ekonomika', 'Tikyba',
+  ];
+
+  const allSubjects = useMemo(() => {
+    const subjects = new Set<string>(DEFAULT_SUBJECTS);
+    managedRooms.forEach(room => {
+      if (room.subject) subjects.add(room.subject);
+      Object.values(room.schedule).forEach(lessons =>
+        lessons.forEach(l => subjects.add(l.subject))
+      );
+    });
+    return Array.from(subjects).sort();
+  }, [managedRooms]);
+
   const handleAddRoom = () => {
     if (!newRoomNumber.trim()) {
       toast.error('Įveskite kabineto numerį');
@@ -77,11 +104,13 @@ const Admin = () => {
       id: newRoomNumber.trim(),
       number: newRoomNumber.trim(),
       floor: parseInt(newRoomFloor),
-      type: newRoomType,
+      type: 'Klasė',
+      subject: newRoomSubject || undefined,
       schedule: Object.fromEntries(DAYS_LIST.map(d => [d, []])),
     };
     setManagedRooms(prev => [...prev, newRoom]);
     setNewRoomNumber('');
+    setNewRoomSubject('');
     toast.success(`Kabinetas ${newRoom.number} pridėtas!`);
   };
 
@@ -308,21 +337,29 @@ const Admin = () => {
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Dalykas</Label>
-                    <Input
-                      value={editSubject}
-                      onChange={e => setEditSubject(e.target.value)}
-                      placeholder="Matematika"
-                      className="w-36"
-                    />
+                    <Select value={editSubject} onValueChange={setEditSubject}>
+                      <SelectTrigger className="w-44">
+                        <SelectValue placeholder="Pasirinkite" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allSubjects.map(s => (
+                          <SelectItem key={s} value={s}>{s}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Mokytojas</Label>
-                    <Input
-                      value={editTeacher}
-                      onChange={e => setEditTeacher(e.target.value)}
-                      placeholder="V. Pavardė"
-                      className="w-36"
-                    />
+                    <Select value={editTeacher} onValueChange={setEditTeacher}>
+                      <SelectTrigger className="w-44">
+                        <SelectValue placeholder="Pasirinkite" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {teachers.filter(t => t.active).map(t => (
+                          <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Klasė</Label>
@@ -370,14 +407,14 @@ const Admin = () => {
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Tipas</Label>
-                  <Select value={newRoomType} onValueChange={setNewRoomType}>
+                  <Label className="text-xs">Dalykas</Label>
+                  <Select value={newRoomSubject} onValueChange={setNewRoomSubject}>
                     <SelectTrigger className="w-44">
-                      <SelectValue />
+                      <SelectValue placeholder="Pasirinkite" />
                     </SelectTrigger>
                     <SelectContent>
-                      {['Klasė', 'Laboratorija', 'Kompiuterių klasė', 'Sporto salė', 'Aktų salė'].map(t => (
-                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                      {allSubjects.map(s => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -398,7 +435,6 @@ const Admin = () => {
                   <TableRow>
                     <TableHead>Numeris</TableHead>
                     <TableHead>Aukštas</TableHead>
-                    <TableHead>Tipas</TableHead>
                     <TableHead className="w-16"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -407,7 +443,6 @@ const Admin = () => {
                     <TableRow key={room.id}>
                       <TableCell className="font-medium">{room.number}</TableCell>
                       <TableCell>{room.floor}</TableCell>
-                      <TableCell>{room.type}</TableCell>
                       <TableCell>
                         <Button
                           variant="ghost"
