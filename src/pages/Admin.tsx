@@ -12,18 +12,6 @@ import { DAYS_LIST, LESSON_TIMES_LIST, Room, Lesson } from '@/data/mockData';
 import { fetchRooms, saveRooms, fetchTeachers, saveTeachers, Teacher } from '@/lib/api';
 import { Plus, Trash2, Users, CalendarDays, DoorOpen, Shield } from 'lucide-react';
 
-const DEFAULT_TEACHERS: Teacher[] = [
-  { id: '1', name: 'J. Kazlauskienė', email: 'j.kazlauskiene@mokykla.lt', subject: 'Matematika', active: true },
-  { id: '2', name: 'R. Petrauskas', email: 'r.petrauskas@mokykla.lt', subject: 'Fizika', active: true },
-  { id: '3', name: 'A. Jonaitis', email: 'a.jonaitis@mokykla.lt', subject: 'Informatika', active: true },
-];
-
-const DEFAULT_SUBJECTS = [
-  'Matematika', 'Lietuvių kalba', 'Anglų kalba', 'Fizika', 'Chemija',
-  'Biologija', 'Istorija', 'Geografija', 'IT', 'Muzika',
-  'Dailė', 'Dailė/technologijos', 'Technologijos', 'Vokiečių kalba', 'Rusų kalba',
-  'Ekonomika', 'Tikyba',
-];
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -34,13 +22,13 @@ const Admin = () => {
   });
 
   const [managedRooms, setManagedRooms] = useState<Room[]>([]);
-  const [teachers, setTeachers] = useState<Teacher[]>(DEFAULT_TEACHERS);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([fetchRooms(), fetchTeachers()]).then(([rooms, teachers]) => {
       setManagedRooms(rooms);
-      if (teachers.length) setTeachers(teachers);
+      setTeachers(teachers);
       setLoading(false);
     });
   }, []);
@@ -69,13 +57,14 @@ const Admin = () => {
   const selectedDayLessons = selectedRoom?.schedule[editDay] || [];
 
   const allSubjects = useMemo(() => {
-    const subjects = new Set<string>(DEFAULT_SUBJECTS);
+    const subjects = new Set<string>();
     managedRooms.forEach(room => {
       if (room.subject) subjects.add(room.subject);
       Object.values(room.schedule).forEach(lessons => lessons.forEach(l => subjects.add(l.subject)));
     });
+    teachers.forEach(t => { if (t.subject) subjects.add(t.subject); });
     return Array.from(subjects).sort();
-  }, [managedRooms]);
+  }, [managedRooms, teachers]);
 
   const syncRooms = async (rooms: Room[]) => {
     setManagedRooms(rooms);
