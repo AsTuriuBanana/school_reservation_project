@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Lock, Mail } from 'lucide-react';
 
+const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'kjbg356';
+
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -14,7 +16,7 @@ const Login = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (email === 'admin' && password === 'Apelsinas1331') {
+    if (email === 'admin' && password === ADMIN_PASSWORD) {
       localStorage.setItem('teacher_logged_in', 'true');
       localStorage.setItem('teacher_name', email);
       toast.success('Sėkmingai prisijungta!');
@@ -50,9 +52,6 @@ const Login = () => {
             </div>
             <Button type="submit" className="w-full">Prisijungti</Button>
           </form>
-          <p className="mt-6 text-center text-xs text-muted-foreground">
-            Prisijungimas: <strong>admin</strong> / <strong>Apelsinas1331</strong>
-          </p>
         </div>
       </main>
     </div>
