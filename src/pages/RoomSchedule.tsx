@@ -1,15 +1,31 @@
 import { useParams, Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import ScheduleTable from '@/components/ScheduleTable';
-import { rooms, isRoomFreeNow } from '@/data/mockData';
+import { Room, isRoomFreeNow } from '@/data/mockData';
+import { fetchRooms } from '@/lib/api';
 import { ArrowLeft, DoorOpen, DoorClosed } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const RoomSchedule = () => {
   const { roomId } = useParams();
-  const room = rooms.find(r => r.id === roomId);
+  const [room, setRoom] = useState<Room | null>(null);
+  const [loading, setLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('teacher_logged_in') === 'true');
+
+  useEffect(() => {
+    fetchRooms().then(rooms => {
+      setRoom(rooms.find(r => r.id === roomId) || null);
+      setLoading(false);
+    });
+  }, [roomId]);
+
+  if (loading) return (
+    <div className="min-h-screen bg-background">
+      <Navbar isLoggedIn={isLoggedIn} onLogout={() => { localStorage.removeItem('teacher_logged_in'); setIsLoggedIn(false); }} />
+      <main className="container py-20 text-center text-muted-foreground">Kraunama...</main>
+    </div>
+  );
 
   if (!room) {
     return (
@@ -17,9 +33,7 @@ const RoomSchedule = () => {
         <Navbar isLoggedIn={isLoggedIn} onLogout={() => { localStorage.removeItem('teacher_logged_in'); setIsLoggedIn(false); }} />
         <main className="container py-20 text-center">
           <h1 className="font-heading text-2xl font-bold mb-4">Kabinetas nerastas</h1>
-          <Button asChild variant="outline">
-            <Link to="/">Grįžti į pradžią</Link>
-          </Button>
+          <Button asChild variant="outline"><Link to="/">Grįžti į pradžią</Link></Button>
         </main>
       </div>
     );
@@ -30,7 +44,6 @@ const RoomSchedule = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar isLoggedIn={isLoggedIn} onLogout={() => { localStorage.removeItem('teacher_logged_in'); setIsLoggedIn(false); }} />
-
       <main className="container py-8">
         <Button variant="ghost" size="sm" asChild className="mb-6">
           <Link to="/" className="gap-1.5">
@@ -52,7 +65,6 @@ const RoomSchedule = () => {
               {isFree ? 'Šiuo metu laisva' : 'Šiuo metu užimta'}
             </div>
           </div>
-
           <ScheduleTable room={room} />
         </div>
       </main>
